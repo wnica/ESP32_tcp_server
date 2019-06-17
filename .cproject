@@ -145,13 +145,13 @@
         		
         <buildTargets>
             			
-            <target name="flash ESPPORT=/dev/ttyUSB1 -j8" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
+            <target name="flash ESPPORT=/dev/ttyUSB0 -j8" path="" targetID="org.eclipse.cdt.build.MakeTargetBuilder">
                 				
                 <buildCommand>make</buildCommand>
                 				
                 <buildArguments>-j8</buildArguments>
                 				
-                <buildTarget>flash ESPPORT=/dev/ttyUSB1 -j8</buildTarget>
+                <buildTarget>flash ESPPORT=/dev/ttyUSB0 -j8</buildTarget>
                 				
                 <stopOnError>true</stopOnError>
                 				
