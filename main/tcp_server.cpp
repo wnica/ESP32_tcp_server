@@ -249,9 +249,6 @@ void app_main()
 
     xTaskCreate(tcp_server_task, "tcp_server", 4096, NULL, 5, NULL);
 
-//    // IP address.
-//    tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA, &ipInfo);
-//    sprintf(str, "%x", ipInfo.ip.addr);
-//    printf("My IP: " IPSTR "\n", IP2STR(&ipInfo.ip));
+// still have to implement something to wait for IP (&netw connection) before opening the socket
 }
 
