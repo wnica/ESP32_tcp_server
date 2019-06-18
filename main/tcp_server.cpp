@@ -6,6 +6,12 @@
    software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
    CONDITIONS OF ANY KIND, either express or implied.
 */
+
+//#define  AP_MODE
+ #define STA_MODE
+
+
+
 #include <string.h>
 #include <sys/param.h>
 #include "freertos/FreeRTOS.h"
@@ -44,7 +50,7 @@ extern "C" {
 #define ESP2_WiFi_PSK	"jw3hgaX}>mrTEJLO" //MAC:	30:ae:a4:05:ef:5c
 #define ESP3_WiFi_PSK	"wh{nOcr>Z8DJNUrN" //MAC:	30:ae:a4:05:ac:38
 
-#define STATIC_IP		"10.128.164.33"//"10.42.0.33"
+#define STATIC_IP		"192.168.0.182"//"10.42.0.33"
 #define SUBNET_MASK		"255.255.255.0"
 #define GATE_WAY		"10.128.164.254"
 #define DNS_SERVER		"8.8.8.8"
@@ -143,11 +149,11 @@ static void tcp_server_task(void *pvParameters)
                 ESP_LOGI(TCP_ServerSocket_TAG, "Received %d bytes from %s:", len, addr_str);
                 ESP_LOGI(TCP_ServerSocket_TAG, "%s", rx_buffer);
 
-                int err = send(sock, rx_buffer, len, 0);
-                if (err < 0) {
-                    ESP_LOGE(TCP_ServerSocket_TAG, "Error occurred during sending: errno %d", errno);
-                    break;
-                }
+//                int err = send(sock, rx_buffer, len, 0);
+//                if (err < 0) {
+//                    ESP_LOGE(TCP_ServerSocket_TAG, "Error occurred during sending: errno %d", errno);
+//                    break;
+//                }
             }
         }
 
@@ -181,7 +187,7 @@ static const char *TAG = "wifi station";
 
 static int s_retry_num = 0;
 
-static void event_handler(void* arg, esp_event_base_t event_base,
+static void wifi_event_handler(void* arg, esp_event_base_t event_base,
                                 int32_t event_id, void* event_data)
 {
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
@@ -201,7 +207,21 @@ static void event_handler(void* arg, esp_event_base_t event_base,
         s_retry_num = 0;
         xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
     }
+
+
+    //AP mode
+    if (event_id == WIFI_EVENT_AP_STACONNECTED) {
+        wifi_event_ap_staconnected_t* event = (wifi_event_ap_staconnected_t*) event_data;
+        ESP_LOGI(TAG, "station "MACSTR" join, AID=%d",
+                 MAC2STR(event->mac), event->aid);
+    } else if (event_id == WIFI_EVENT_AP_STADISCONNECTED) {
+        wifi_event_ap_stadisconnected_t* event = (wifi_event_ap_stadisconnected_t*) event_data;
+        ESP_LOGI(TAG, "station "MACSTR" leave, AID=%d",
+                 MAC2STR(event->mac), event->aid);
+    }
 }
+
+#ifdef STA_MODE
 
 void wifi_init_sta()
 {
@@ -214,14 +234,16 @@ void wifi_init_sta()
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 
-    ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL));
-    ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler, NULL));
+    ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL));
+    ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler, NULL));
 
     wifi_config_t wifi_config = {};
-    //      strcpy((char*)wifi_config.sta.ssid, "PSK_GENT_LiTL");
-    //      strcpy((char*)wifi_config.sta.password, "wh{nOcr>Z8DJNUrN");
-          strcpy((char*)wifi_config.sta.ssid, "laptopWard");
-          strcpy((char*)wifi_config.sta.password, "labo1234");
+//          strcpy((char*)wifi_config.sta.ssid, "PSK_GENT_LiTL");
+//          strcpy((char*)wifi_config.sta.password, "wh{nOcr>Z8DJNUrN");
+//          strcpy((char*)wifi_config.sta.ssid, "laptopWard");
+//          strcpy((char*)wifi_config.sta.password, "labo1234");
+          strcpy((char*)wifi_config.sta.ssid, "telenet-8671921");
+          strcpy((char*)wifi_config.sta.password, "xv5Rjz8zjjkN");
 
 
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA) );
@@ -233,6 +255,42 @@ void wifi_init_sta()
              "PSK_GENT_LiTL");
 }
 
+#endif
+#ifdef AP_MODE
+
+void wifi_init_softap()
+{
+    tcpip_adapter_init();
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
+
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+
+    ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL));
+
+    wifi_config_t wifi_config = {};
+    strcpy((char*)wifi_config.ap.ssid, "ESP32_3");
+    strcpy((char*)wifi_config.ap.password, "labo1234");
+    wifi_config.ap.ssid_len = strlen("ESP32_3");
+    wifi_config.ap.max_connection = 5;
+    wifi_config.ap.authmode = WIFI_AUTH_WPA_WPA2_PSK;
+
+
+    if (strlen("labo1234") == 0) {
+        wifi_config.ap.authmode = WIFI_AUTH_OPEN;
+    }
+
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
+    ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_AP, &wifi_config));
+    ESP_ERROR_CHECK(esp_wifi_start());
+
+    ESP_LOGI(TAG, "wifi_init_softap finished. SSID:%s password:%s",
+    		"ESP32_3", "labo1234");
+}
+#endif
+
+
+
 void app_main()
 {
     //Initialize NVS
@@ -243,10 +301,17 @@ void app_main()
     }
     ESP_ERROR_CHECK(ret);
 
+#ifdef STA_MODE
     ESP_LOGI(TAG, "ESP_WIFI_MODE_STA");
     wifi_init_sta();
+#endif
+#ifdef AP_MODE
+    ESP_LOGI(TAG, "ESP_WIFI_MODE_AP");
+    wifi_init_softap();
 
+#endif
 
+    vTaskDelay(10000/portTICK_PERIOD_MS);
     xTaskCreate(tcp_server_task, "tcp_server", 4096, NULL, 5, NULL);
 
 // still have to implement something to wait for IP (&netw connection) before opening the socket
